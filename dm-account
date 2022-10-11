@@ -1,0 +1,45 @@
+#!/bin/bash
+#
+# Prototipo di backend CUPS con accounting integrato per il dipartimento di 
+# matematica. Al momento funziona, conta le pagine, ma non fa nessun tipo 
+# di check ulteriore. 
+
+PRINTERS="cdc3 cdc4 cdc11"
+
+if [ $# -eq 0 ]; then
+  for printer in $PRINTERS; do
+    echo "direct dm-account://$printer \"$printer\" \"Accounting DM module for $printer\""
+  done
+  exit 0
+fi
+
+CUPS_BIN_DIR=$( cups-config --serverbin ) || CUPS_BIN_DIR="/usr/lib/cups"
+
+PRINTING_USER=$2
+FILENAME=$3
+NCOPIES=$4
+
+# Even if a file is specified, read from stdin
+if test -n "$6"
+    then exec <"$6"
+fi
+
+# Save the file to count the number of pages
+PSFILE=$(mktemp)
+cat - > $PSFILE
+
+# Perché qui devo togliere 2 pagine? Probabilmente è qualche mistero di
+# Ghostscript che non riesco a comprendere.
+NPAGES=$(echo xxx | ghostscript -sDEVICE=nullpage $PSFILE | grep showpage | wc -l)
+NPAGES=$(( ($NPAGES - 2) * $NCOPIES ))
+
+for printer in $PRINTERS; do
+  if [ "dm-account://$printer" = "$DEVICE_URI" ]; then
+    # FIXME: cdclf è raggiungibile solo su printserver.dm.unipi.it, probabilmente
+    # conviene inserire tutto l'URI sopra, e non solo la stampante.
+    echo "INFO: dm-account printing $NPAGES pages on $printer" >> /tmp/dm-account.debug
+    export DEVICE_URI="ipp://manuzio.cs.dm.unipi.it/printers/$printer"
+    $CUPS_BIN_DIR/backend/ipp "$1" "$2" "$3" "$4" "$5"a < $PSFILE
+    rm -f $PSFILE
+  fi
+done
