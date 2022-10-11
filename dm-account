@@ -4,13 +4,27 @@
 # matematica. Al momento funziona, conta le pagine, ma non fa nessun tipo 
 # di check ulteriore. 
 
-PRINTERS="cdc3 cdc4 cdc11"
+# Syntax is printer:maxpages per quotaperiod:printserver
+PRINTERS="cdc3:1500:manuzio.cs.dm.unipi.it cdc4:2500:manuzio.cs.dm.unipi.it cdc11:500:manuzio.cs.dm.unipi.it cdclf:1500:printserver.dm.unipi.it"
+DATABASE_PATH="/tmp/dm-cups.db"
+QUOTAPERIOD=$((86400 * 365))
 
 if [ $# -eq 0 ]; then
   for printer in $PRINTERS; do
-    echo "direct dm-account://$printer \"$printer\" \"Accounting DM module for $printer\""
+    prname=$(echo $printer | cut -d ':' -f1)
+    echo "direct dm-account://$prname \"$prname\" \"Accounting DM module for $prname\""
   done
   exit 0
+fi
+
+# Check iniziale: se il database non esiste viene creato
+if [ ! -r $DATABASE_PATH ]; then
+  echo "INFO: Creating the database in $DATABASE_PATH" 1>&2
+  echo "CREATE TABLE documents (user VARCHAR(256), printer VARCHAR(64), pages INTEGER, timestamp INTEGER);" | sqlite3 $DATABASE_PATH
+  if [ $? -ne 0 ]; then
+    echo "ERROR: Failed to create the database in $DATABASE_PATH, exiting" 1>&2
+    exit 1
+  fi
 fi
 
 CUPS_BIN_DIR=$( cups-config --serverbin ) || CUPS_BIN_DIR="/usr/lib/cups"
@@ -30,16 +44,54 @@ cat - > $PSFILE
 
 # Perché qui devo togliere 2 pagine? Probabilmente è qualche mistero di
 # Ghostscript che non riesco a comprendere.
-NPAGES=$(echo xxx | ghostscript -sDEVICE=nullpage $PSFILE | grep showpage | wc -l)
-NPAGES=$(( ($NPAGES - 2) * $NCOPIES ))
+GSOUT=$(echo xxx | ghostscript -sDEVICE=nullpage $PSFILE)
+if [ $? -ne 0 ]; then
+  echo "ERROR: Failed to run Ghostscript on the document, exiting" 1>&2
+  exit 1
+fi
+NPAGES=$(echo "$GSOUT" | grep showpage | wc -l)
+NPAGES=$(( ($NPAGES) * $NCOPIES ))
 
-for printer in $PRINTERS; do
+# Detect the necessary printer
+for printerentry in $PRINTERS; do
+  printer=$(echo $printerentry | cut -d ':' -f1)
   if [ "dm-account://$printer" = "$DEVICE_URI" ]; then
-    # FIXME: cdclf è raggiungibile solo su printserver.dm.unipi.it, probabilmente
-    # conviene inserire tutto l'URI sopra, e non solo la stampante.
-    echo "INFO: dm-account printing $NPAGES pages on $printer" >> /tmp/dm-account.debug
-    export DEVICE_URI="ipp://manuzio.cs.dm.unipi.it/printers/$printer"
-    $CUPS_BIN_DIR/backend/ipp "$1" "$2" "$3" "$4" "$5"a < $PSFILE
-    rm -f $PSFILE
+    SELECTEDPRINTER="$printer"
+    QUOTA=$(echo $printerentry | cut -d ':' -f2)
+    PRINTSERVER=$(echo $printerentry | cut -d ':' -f3)
   fi
 done
+
+if [ "$SELECTEDPRINTER" = "" ]; then  
+  echo "ERROR: Could not find the printer corresponding to $DEVICE_URI"
+  exit 1
+fi
+
+echo "INFO: Selected printer is $SELECTEDPRINTER, quota is $QUOTA" 1>&2
+
+# Check: l'utente che vogliamo far stampare, ha già stampato un numero 
+# di pagine sufficiente nell'ultimo periodo prefissato?
+timestamp=$(date +%s)
+PRINTEDPAGES=$(echo "select sum(pages) from documents where user=\"$PRINTING_USER\" and printer=\"$SELECTEDPRINTER\" and timestamp >= $((timestamp - $QUOTAPERIOD))" | sqlite3 /tmp/dm-cups.db)
+if [ "$PRINTEDPAGES" = "" ]; then
+  PRINTEDPAGES="0"
+fi
+echo "INFO: User $PRINTING_USER has printed $PRINTEDPAGES pages on $SELECTEDPRINTER"
+
+NEWTOTAL=$(($PRINTEDPAGES + $NPAGES))
+if [ $NEWTOTAL -gt $QUOTA ]; then
+  # We cannot let the user print, he/she is out of quota
+  echo "ERROR: User quota is exhausted" 1>&2
+  exit 1
+else
+  # Update the quota
+  echo "INSERT INTO documents VALUES (\"$PRINTING_USER\", \"$SELECTEDPRINTER\",$NPAGES, $timestamp);" | sqlite3 $DATABASE_PATH
+fi
+
+# FIXME: cdclf è raggiungibile solo su printserver.dm.unipi.it, probabilmente
+# conviene inserire tutto l'URI sopra, e non solo la stampante.
+echo "INFO: dm-account printing $NPAGES pages on $SELECTEDPRINTER" 1>&2
+export DEVICE_URI="ipp://$PRINTSERVER/printers/$SELECTEDPRINTER"
+$CUPS_BIN_DIR/backend/ipp "$1" "$2" "$3" "$4" "$5" < $PSFILE
+rm -f $PSFILE
+
