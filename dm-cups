@@ -28,11 +28,12 @@ fi
 # Check iniziale: se il database non esiste viene creato
 if [ ! -r $DATABASE_PATH ]; then
   echo "INFO: Creating the database in $DATABASE_PATH" 1>&2
-  echo "CREATE TABLE documents (user VARCHAR(256), printer VARCHAR(64), pages INTEGER, timestamp INTEGER);" | sqlite3 $DATABASE_PATH
-  if [ $? -ne 0 ]; then
-    echo "ERROR: Failed to create the database in $DATABASE_PATH, exiting" 1>&2
-    exit 1
-  fi
+fi
+
+echo "CREATE TABLE IF NOT EXISTS documents (user VARCHAR(256), printer VARCHAR(64), pages INTEGER, timestamp INTEGER);" | sqlite3 $DATABASE_PATH
+if [ $? -ne 0 ]; then
+  echo "ERROR: Failed to create the database in $DATABASE_PATH, exiting" 1>&2
+  exit 1
 fi
 
 CUPS_BIN_DIR=$( cups-config --serverbin ) || CUPS_BIN_DIR="/usr/lib/cups"
