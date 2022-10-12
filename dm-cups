@@ -97,15 +97,13 @@ echo "INFO: User $PRINTING_USER has printed $PRINTEDPAGES pages on $SELECTEDPRIN
 NEWTOTAL=$(($PRINTEDPAGES + $NPAGES))
 if [ $NEWTOTAL -gt $QUOTA ]; then
   # We cannot let the user print, he/she is out of quota
-  echo "ERROR: User quota is exhausted" 1>&2
-  exit 1
+  echo "ERROR: User is over quota" 1>&2
+  exit 0
 else
   # Update the quota
   echo "INSERT INTO documents VALUES (\"$PRINTING_USER\", \"$SELECTEDPRINTER\",$NPAGES, $timestamp);" | sqlite3 $DATABASE_PATH
 fi
 
-# FIXME: cdclf è raggiungibile solo su printserver.dm.unipi.it, probabilmente
-# conviene inserire tutto l'URI sopra, e non solo la stampante.
 echo "INFO: dm-account printing $NPAGES pages on $SELECTEDPRINTER" 1>&2
 export DEVICE_URI="ipp://$PRINTSERVER/printers/$SELECTEDPRINTER"
 $CUPS_BIN_DIR/backend/ipp "$1" "$2" "$3" "$4" "$5" < $PSFILE
