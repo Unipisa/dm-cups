@@ -36,7 +36,9 @@ fi
 CUPS_BIN_DIR=$( cups-config --serverbin ) || CUPS_BIN_DIR="/usr/lib/cups"
 
 PRINTING_USER=$2
-FILENAME=$3
+FILENAME=${3/ /-/}
+FILENAME=${FILENAME/_/-}
+FILENAME=${FILENAME/[^A-Za-z0-9.-]/}
 NCOPIES=$4
 
 # Sanitize printing user, we only allow [a-z], dots, and digits in the name
@@ -99,8 +101,34 @@ else
   echo "INSERT INTO documents VALUES (\"$PRINTING_USER\", \"$SELECTEDPRINTER\",$NPAGES, $timestamp);" | sqlite3 $DATABASE_PATH
 fi
 
-echo "INFO: Printing $NPAGES pages on $SELECTEDPRINTER" 1>&2
 export DEVICE_URI="ipp://$PRINTSERVER/printers/$SELECTEDPRINTER"
+
+# Prepare the banner
+OLDIR=$(pwd)
+BANNER_TMPDIR=$(mktemp -d)
+cd ${BANNER_TMPDIR}
+cp ${BANNER_FILE} . && \
+  sed -i "s/@@username@@/${PRINTING_USER}/g" banner.tex && \ 
+  sed -i "s/@@title@@/${PRINTING_USER}/g" banner.tex && \ 
+  sed -i "s/@@printer@@/${SELECTEDPRINTER}/g" banner.tex && \ 
+  sed -i "s/@@npages@@/${NEWTOTAL}/g" banner.tex && \ 
+  sed -i "s/@@title@@/${FILENAME}/g" banner.tex && \ 
+  sed -i "s/@@quota@@/${QUOTA}/g" banner.tex && \ 
+  /usr/bin/pdflatex  banner.tex > /dev/null 2> /dev/null
+if [ $? -ne 0 ]; then
+  echo "ERROR: Failed to create the banner" 1>&2
+  exit 1
+else
+  echo "INFO: Printing banner for $PRINTINGUSER on $SELECTEDPRINTER" 1>&2
+  $CUPS_BIN_DIR/backend/ipp "$1" "$2" "$3" "$4" "$5" < banner.pdf
+fi
+
+cd ${OLDDIR}
+rm -r ${BANNER_TMPDIR}
+
+sleep 10
+
+echo "INFO: Printing $NPAGES pages on $SELECTEDPRINTER" 1>&2
 $CUPS_BIN_DIR/backend/ipp "$1" "$2" "$3" "$4" "$5" < $PSFILE
 rm -f $PSFILE
 
