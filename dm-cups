@@ -6,13 +6,13 @@
 
 # Syntax is printer:maxpages per quotaperiod:printserver
 PRINTERS="cdc3:1500:manuzio.cs.dm.unipi.it cdc4:2500:manuzio.cs.dm.unipi.it cdc11:500:manuzio.cs.dm.unipi.it cdclf:1500:printserver.dm.unipi.it"
-DATABASE_PATH="/tmp/dm-cups.db"
+DATABASE_PATH="/var/lib/dm-cups.db"
 QUOTAPERIOD=$((86400 * 365))
 
 if [ $# -eq 0 ]; then
   for printer in $PRINTERS; do
     prname=$(echo $printer | cut -d ':' -f1)
-    echo "direct dm-account://$prname \"$prname\" \"Accounting DM module for $prname\""
+    echo "direct dm-cups://$prname \"$prname\" \"Accounting DM module for $prname\""
   done
   exit 0
 fi
@@ -20,11 +20,12 @@ fi
 # Check iniziale: se il database non esiste viene creato
 if [ ! -r $DATABASE_PATH ]; then
   echo "INFO: Creating the database in $DATABASE_PATH" 1>&2
-  echo "CREATE TABLE documents (user VARCHAR(256), printer VARCHAR(64), pages INTEGER, timestamp INTEGER);" | sqlite3 $DATABASE_PATH
-  if [ $? -ne 0 ]; then
-    echo "ERROR: Failed to create the database in $DATABASE_PATH, exiting" 1>&2
-    exit 1
-  fi
+fi
+
+echo "CREATE TABLE IF NOT EXISTS documents (user VARCHAR(256), printer VARCHAR(64), pages INTEGER, timestamp INTEGER);" | sqlite3 $DATABASE_PATH
+if [ $? -ne 0 ]; then
+  echo "ERROR: Failed to initialize the database in $DATABASE_PATH, exiting" 1>&2
+  exit 1
 fi
 
 CUPS_BIN_DIR=$( cups-config --serverbin ) || CUPS_BIN_DIR="/usr/lib/cups"
@@ -32,6 +33,13 @@ CUPS_BIN_DIR=$( cups-config --serverbin ) || CUPS_BIN_DIR="/usr/lib/cups"
 PRINTING_USER=$2
 FILENAME=$3
 NCOPIES=$4
+
+# Sanitize printing user, we only allow [a-z], dots, and digits in the name
+SANITIZED_USER=${PRINTING_USER/[^A-Za-z0-9.]/}
+if [ "$SANITIZED_USER" != "$PRINTING_USER" ]; then
+  echo "ERROR: Invalid user specified: $PRINTING_USER" 1>&2
+  exit 1
+fi
 
 # Even if a file is specified, read from stdin
 if test -n "$6"
