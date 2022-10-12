@@ -5,7 +5,7 @@
 # di check ulteriore. 
 
 if [ "$CONFIG_FILE" = "" ]; then 
-  CONFIG_FILE="/etc/dm-cups.conf"
+  CONFIG_FILE="/etc/cups/dm-cups.conf"
 fi
 
 if [ ! -r "$CONFIG_FILE" ]; then
