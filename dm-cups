@@ -36,7 +36,8 @@ fi
 CUPS_BIN_DIR=$( cups-config --serverbin ) || CUPS_BIN_DIR="/usr/lib/cups"
 
 PRINTING_USER=$2
-FILENAME=${3/ /-/}
+FILENAME=$3
+FILENAME=${FILENAME/ /-/}
 FILENAME=${FILENAME/_/-}
 FILENAME=${FILENAME/[^A-Za-z0-9.-]/}
 NCOPIES=$4
