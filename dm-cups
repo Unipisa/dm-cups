@@ -108,7 +108,7 @@ export DEVICE_URI="ipp://$PRINTSERVER/printers/$SELECTEDPRINTER"
 OLDIR=$(pwd)
 BANNER_TMPDIR=$(mktemp -d)
 cd ${BANNER_TMPDIR}
-cp ${BANNER_FILE} . && \
+cp ${BANNER_DIR}/* . && \
   sed -i "s/@@username@@/${PRINTING_USER}/g" banner.tex && \ 
   sed -i "s/@@title@@/${FILENAME}/g" banner.tex && \ 
   sed -i "s/@@printer@@/${SELECTEDPRINTER}/g" banner.tex && \ 
