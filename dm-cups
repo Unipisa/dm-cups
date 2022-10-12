@@ -74,7 +74,7 @@ for printerentry in $PRINTERS; do
 done
 
 if [ "$SELECTEDPRINTER" = "" ]; then  
-  echo "ERROR: Could not find the printer corresponding to $DEVICE_URI"
+  echo "ERROR: Could not find the printer corresponding to $DEVICE_URI" 1>&2
   exit 1
 fi
 
@@ -87,7 +87,7 @@ PRINTEDPAGES=$(echo "select sum(pages) from documents where user=\"$PRINTING_USE
 if [ "$PRINTEDPAGES" = "" ]; then
   PRINTEDPAGES="0"
 fi
-echo "INFO: User $PRINTING_USER has printed $PRINTEDPAGES pages on $SELECTEDPRINTER"
+echo "INFO: User $PRINTING_USER has printed $PRINTEDPAGES pages on $SELECTEDPRINTER" 1>&2
 
 NEWTOTAL=$(($PRINTEDPAGES + $NPAGES))
 if [ $NEWTOTAL -gt $QUOTA ]; then
@@ -99,7 +99,7 @@ else
   echo "INSERT INTO documents VALUES (\"$PRINTING_USER\", \"$SELECTEDPRINTER\",$NPAGES, $timestamp);" | sqlite3 $DATABASE_PATH
 fi
 
-echo "INFO: dm-cups printing $NPAGES pages on $SELECTEDPRINTER" 1>&2
+echo "INFO: Printing $NPAGES pages on $SELECTEDPRINTER" 1>&2
 export DEVICE_URI="ipp://$PRINTSERVER/printers/$SELECTEDPRINTER"
 $CUPS_BIN_DIR/backend/ipp "$1" "$2" "$3" "$4" "$5" < $PSFILE
 rm -f $PSFILE
