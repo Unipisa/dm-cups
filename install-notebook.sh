@@ -3,9 +3,9 @@
 
 set -e
 
-echo -n "Installing the required packages (sqlite3, ghoscript, cups) ... "
+echo -n "Installing the required packages (sqlite3, ghoscript, cups, texlive-latex-base) ... "
 sudo apt-get -q update > /dev/null 2>&1
-sudo apt-get -q -y install sqlite3 ghostscript cups > /dev/null 2>&1
+sudo apt-get -q -y install sqlite3 ghostscript cups texlive-latex-base > /dev/null 2>&1
 echo "done"
 
 echo "Downloading the dm-cups backend"
