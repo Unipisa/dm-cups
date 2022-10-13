@@ -15,7 +15,7 @@ sudo chmod a+x /usr/lib/cups/backend/dm-cups
 echo "Installing the configuration file in /etc/cups/dm-cups.conf"
 sudo wget -q -O /etc/cups/dm-cups.conf https://github.com/Unipisa/dm-cups/blob/main/dm-cups-portatili.conf
 
-echo "Installing the printers cdcpt, cdcpp, cdcsd, cdclf"
+echo "Installing the printers cdcpt, cdcpp, cdcsd, cdclf, cdc11"
 for printer in cdcpt cdcpp cdcsd cdclf cdc11; do
   if ! lpq -P$printer > /dev/null; then
     sudo /usr/sbin/lpadmin -p $printer -E -v "dm-cups://$printer" -m drv:///sample.drv/generic.ppd
