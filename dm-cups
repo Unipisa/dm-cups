@@ -94,17 +94,24 @@ if [ "$PRINTEDPAGES" = "" ]; then
 fi
 echo "INFO: User $PRINTING_USER has printed $PRINTEDPAGES pages on $SELECTEDPRINTER" 1>&2
 
+# The quota are tracked only if > 0, which means "disabled"
 NEWTOTAL=$(($PRINTEDPAGES + $NPAGES))
-if [ $NEWTOTAL -gt $QUOTA ]; then
-  # We cannot let the user print, he/she is out of quota
-  echo "ERROR: User is over quota" 1>&2
-  exit 0
-else
-  # Update the quota
-  echo "INSERT INTO documents VALUES (\"$PRINTING_USER\", \"$SELECTEDPRINTER\",$NPAGES, $timestamp);" | sqlite3 $DATABASE_PATH
+if [ $QUOTA -gt 0 ]; then
+  if [ $NEWTOTAL -gt $QUOTA ]; then
+    # We cannot let the user print, he/she is out of quota
+    echo "ERROR: User is over quota" 1>&2
+    exit 0
+  else
+    # Update the quota
+    echo "INSERT INTO documents VALUES (\"$PRINTING_USER\", \"$SELECTEDPRINTER\",$NPAGES, $timestamp);" | sqlite3 $DATABASE_PATH
+  fi
 fi
 
 export DEVICE_URI="ipp://$PRINTSERVER/printers/$SELECTEDPRINTER"
+
+if [ $QUOTA -eq 0 ]; then
+  QUOTA="\\infty"
+fi
 
 # Prepare the banner
 OLDIR=$(pwd)
