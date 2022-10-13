@@ -116,7 +116,7 @@ fi
 export DEVICE_URI="ipp://$PRINTSERVER/printers/$SELECTEDPRINTER"
 
 if [ $QUOTA -eq 0 ]; then
-  QUOTA="\\infty"
+  QUOTA="infinity"
 fi
 
 # Prepare the banner
