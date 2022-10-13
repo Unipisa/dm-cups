@@ -13,7 +13,7 @@ sudo wget -q -O /usr/lib/cups/backend/dm-cups https://raw.githubusercontent.com/
 sudo chmod a+x /usr/lib/cups/backend/dm-cups
 
 echo "Installing the configuration file in /etc/cups/dm-cups.conf"
-sudo wget -q -O /etc/cups/dm-cups.conf https://github.com/Unipisa/dm-cups/blob/main/dm-cups-portatili.conf
+sudo wget -q -O /etc/cups/dm-cups.conf https://raw.githubusercontent.com/Unipisa/dm-cups/main/dm-cups-portatili.conf
 
 echo "Installing the printers cdcpt, cdcpp, cdcsd, cdclf, cdc11"
 for printer in cdcpt cdcpp cdcsd cdclf cdc11; do
