@@ -66,6 +66,12 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 NPAGES=$(echo "$GSOUT" | grep showpage | wc -l)
+# I don't really know why ghostscript counts two pages more after CUPS
+# produces the Postscript file, but that is what happens, apparently
+NPAGES=$(($NPAGES - 2))
+if [ $NPAGES -le 0 ]; then
+  NPAGES=1
+fi
 NPAGES=$(( ($NPAGES) * $NCOPIES ))
 
 # Detect the necessary printer
