@@ -52,6 +52,23 @@ if [ "$SANITIZED_USER" != "$PRINTING_USER" ]; then
   exit 1
 fi
 
+# Check if the user can print
+if echo "${SANITIZED_USER}" | egrep -q "^a[0-9]{6}$"; then
+  # OK, docente
+  true
+else
+  if [ "${AUTHPDS_TOKEN}" != "" ]; then
+    if curl --silent -X GET "https://api.unipi.it:443/authPds/api/Carriera/studente/uid/${SANITIZED_USER}/" -H "accept: */*" -H "Authorization: Bearer ${AUTHPDS_TOKEN}" | grep 'MATEMATICA'; then
+      # OK, studente di matematica
+      true
+    else
+      echo "ERROR: Solo studenti e docenti di matematica possono stampare" 1>&2
+      exit 5 # 5 is CUPS_BACKEND_CANCEL
+    fi
+  fi
+fi
+
+
 # Even if a file is specified, read from stdin
 if test -n "$6"
     then exec <"$6"
