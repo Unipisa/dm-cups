@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 
-if [ "$CONFIG_FILE" = "" ]; then
+if [ "$CONFIG_FILE" = "" ]; then 
   CONFIG_FILE="/etc/cups/dm-cups.conf"
 fi
 
@@ -38,9 +38,10 @@ CUPS_BIN_DIR=$( cups-config --serverbin ) || CUPS_BIN_DIR="/usr/lib/cups"
 
 PRINTING_USER=$2
 FILENAME=$3
+# FILENAME=${FILENAME// /-/}
 FILENAME=${FILENAME//_/-}
 FILENAME=${FILENAME//[^A-Za-z0-9.-]/}
-FILENAME=${FILENAME:0:60}
+FILENAME=${FILENAME:0:80}
 NCOPIES=$4
 
 # Sanitize printing user, we only allow [a-z], dots, and digits in the name
@@ -84,14 +85,14 @@ for printerentry in $PRINTERS; do
   fi
 done
 
-if [ "$SELECTEDPRINTER" = "" ]; then
+if [ "$SELECTEDPRINTER" = "" ]; then  
   echo "ERROR: Could not find the printer corresponding to $DEVICE_URI" 1>&2
   exit 1
 fi
 
 echo "INFO: Selected printer is $SELECTEDPRINTER, quota is $QUOTA" 1>&2
 
-# Check: l'utente che vogliamo far stampare, ha già stampato un numero
+# Check: l'utente che vogliamo far stampare, ha già stampato un numero 
 # di pagine sufficiente nell'ultimo periodo prefissato?
 timestamp=$(date +%s)
 PRINTEDPAGES=$(echo "select sum(pages) from documents where user=\"$PRINTING_USER\" and printer=\"$SELECTEDPRINTER\" and timestamp >= $((timestamp - $QUOTAPERIOD))" | sqlite3 /tmp/dm-cups.db)
@@ -124,12 +125,12 @@ OLDIR=$(pwd)
 BANNER_TMPDIR=$(mktemp -d)
 cd ${BANNER_TMPDIR}
 cp ${BANNER_DIR}/* . && \
-  sed -i "s/@@username@@/${PRINTING_USER}/g" banner.tex && \
-  sed -i "s/@@title@@/${FILENAME}/g" banner.tex && \
-  sed -i "s/@@printer@@/${SELECTEDPRINTER}/g" banner.tex && \
-  sed -i "s/@@npages@@/${NEWTOTAL}/g" banner.tex && \
-  sed -i "s/@@title@@/${FILENAME}/g" banner.tex && \
-  sed -i "s/@@quota@@/${QUOTA}/g" banner.tex && \
+  sed -i "s/@@username@@/${PRINTING_USER}/g" banner.tex && \ 
+  sed -i "s/@@title@@/${FILENAME}/g" banner.tex && \ 
+  sed -i "s/@@printer@@/${SELECTEDPRINTER}/g" banner.tex && \ 
+  sed -i "s/@@npages@@/${NEWTOTAL}/g" banner.tex && \ 
+  sed -i "s/@@title@@/${FILENAME}/g" banner.tex && \ 
+  sed -i "s/@@quota@@/${QUOTA}/g" banner.tex && \ 
   /usr/bin/pdflatex  banner.tex > /dev/null 2> /dev/null
 if [ $? -ne 0 ]; then
   echo "ERROR: Failed to create the banner" 1>&2
@@ -138,7 +139,7 @@ else
   echo "INFO: Printing banner for $PRINTING_USER on $SELECTEDPRINTER" 1>&2
   # Sending the banner directly to the other printserver, to avoid looping into 
   # this module (which would print the banner for the banner itself, and so on)
-  CUPS_USER=$PRINTING_USER lpr -H $PRINTSERVER -P$SELECTEDPRINTER banner.pdf 
+  CUPS_USER=$PRINTING_USER lpr -H $PRINTSERVER -P$SELECTEDPRINTER -o print-quality=3 banner.pdf
 fi
 
 cd ${OLDDIR}
