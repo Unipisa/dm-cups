@@ -3,6 +3,8 @@ all:
 install:
 	install -m 0755 dm-cups /usr/lib/cups/backend
 	install -m 0644 dm-cups.conf /etc/cups
+	mkdir -p /var/lib/dm-cups
+	chown lp /var/lib/dm-cups -R || true
 	test -d /etc/cups/dm-banner || mkdir -p /etc/cups/dm-banner
 	install -D -m 0644 banner.tex banner-logo-transparent.png /etc/cups/dm-banner
 
