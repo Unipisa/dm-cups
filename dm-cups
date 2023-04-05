@@ -58,8 +58,8 @@ if echo "${SANITIZED_USER}" | egrep -q "^a[0-9]{6}$"; then
   true
 else
   if [ "${AUTHPDS_TOKEN}" != "" ]; then
-    if curl --silent -X GET "https://api.unipi.it:443/authPds/api/Carriera/studente/uid/${SANITIZED_USER}/" -H "accept: */*" -H "Authorization: Bearer ${AUTHPDS_TOKEN}" | grep 'MATEMATICA'; then
-      # OK, studente di matematica
+    if curl --silent -X GET "https://api.unipi.it:443/authPds/api/Carriera/studente/uid/${SANITIZED_USER}/" -H "accept: */*" -H "Authorization: Bearer ${AUTHPDS_TOKEN}" | egrep '(MATEMATICA|Mobilit|Transizione)'; then
+      # OK, studente di matematica oppure in scambio
       true
     else
       echo "ERROR: Solo studenti e docenti di matematica possono stampare" 1>&2
